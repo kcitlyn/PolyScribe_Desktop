@@ -1,0 +1,13 @@
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment folder
+venv/
+
+# Ignore personal translation and vosk model downloads
+translation_models/
+vosk_models/
+
+# Ignore system files
+.DS_Store
