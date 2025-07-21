@@ -1,17 +1,35 @@
-from hardware.gpio import Button, Keypad
+from translator.src.hardware.input_handler import Button, Keypad
 from translation.text_translate import TextTranslator
-from utils import prompt_choice
+import utils 
+import json
+from hardware.display_logic import Stats
 
-def main():
-    #make this part correspond with button push later
-    minimum_time_needed_speaking= 5
-    speaking_button= Button(model_used)
-    keypad= Keypad()
-    model_used=keypad.input_model_type(1,1) #change values later/ add something corresponding to matrix stuff
-    keypad.key_scanning_setup()
+voice_button= Button()
+VOICE_MODE_CHANGE_TIME=0
 
-    if speaking_button.time_held_for() >= minimum_time_needed_speaking:
-        Button.voice_processor_setup()
+with open("config.json", "r") as f:
+    config = json.load(f)
     
+def main():
+    #default values: to edit values, change config.json file
+
+    button= Button()
+
+    while True:
+        try:
+            instructions_collected=Stats()
+            if instructions_collected.instruction_collection:
+                instructions_collected.process_instructions()
+
+            if voice_button.is_held_for(VOICE_MODE_CHANGE_TIME):  # if start button held for reboot time, restart
+                if config["microphone_mode"]== "push-to-talk":
+                    config["microphone_mode"]== "open-talk"
+                else:
+                    config["push-to-talk"] == "open-talk"
+        except KeyboardInterrupt:
+            pass
+        finally:
+            Stats.save_config()
+
 if __name__ == "__main__":
     main()

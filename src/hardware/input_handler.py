@@ -1,5 +1,6 @@
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO #rasp pi or other GPIO pin hardware needed
 import time
+import json
 
 from translation.transcription import VoiceProcessor
 
@@ -8,8 +9,8 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(BUTTON_PIN, GPIO.IN, gpio_up_down=GPIO.PUD_DOWN)
 
 class Button:
-    def __init__(self, model_used):
-        self.model_used = model_used
+    def __init__(self, pin):
+        self.pin = pin
         self._is_pressed = False
         self._pressed_and_released = False
         self._press_time = None
@@ -23,18 +24,6 @@ class Button:
         GPIO.remove_event_detect(self.pin)
         GPIO.add_event_detect(self.pin, GPIO.BOTH, bouncetime=75)
         GPIO.add_event_callback(self.pin, self._handle_edge)
-
-    def voice_processor_setup(self):
-        input_sample_rate = 24000 #change depending on microphone Hz, possibly add later something taht can sense this??
-        device_ID = 3 #change depending on microphone ID
-        # For macOS, you can find the device ID using `sd.query_devices()` add later windows version
-        if self.model_used == "english_model":
-            model = "/Users/kaitlynchen/rsp5/translator/vosk-model-en-us-0.22-lgraph" #ADD LATER
-        #mandarin_model = " " #add later
-        self.transcriber = VoiceProcessor(model, input_sample_rate, device_ID)
-        #mandarin_transcribed = VoiceProcessor(mandarin_model, sample_rate)
-        #return self.transcriber.processing_audio()
-        print(self.transcriber.processing_audio())
 
     #button specifics
     def button_action(self):
@@ -114,16 +103,6 @@ class Keypad:
                     time.sleep(0.2)  # Debounce
                     return self.MATRIX_KEYS[row_index][col_index]
 
-    def input_model_type(self):
-        language_mapping= { #possibly loop???
-            '12': ('english', 'chinese'),
-            '21': ('chinese', 'english'),
-            '13': ('english', 'spanish'),
-             # etc.
-        }
-        key=self.scan_keypad()
-        if key=="1": #fix
-            return "vosk-model-en-us-0.22-lgraph"
-        else:
-            print("Type a number 1-9defaulted model is english.")
-    
+
+       
+        
