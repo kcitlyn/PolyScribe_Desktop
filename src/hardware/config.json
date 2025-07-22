@@ -1,14 +1,15 @@
 {
    "device_ID": 0,
    "microphone_mode": "push_to_talk",
-   "screen_mode": "push_to_talk",
+   "voice_mode": "push_to_talk",
+   "method_mode": "transcribe",
    "display_mode": "settings",
    "led_feedback": true,
    "log_file_path": "insert later",
    "language_mapping": {
     "1": "english",
-    "2": "spanish",
-    "3": "french"},
+    "2": "chinese",
+    "3": "spanish"},
     "from_language": "english",
     "to_language": "mandarin"
 }

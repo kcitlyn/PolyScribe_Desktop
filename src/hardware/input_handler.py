@@ -1,8 +1,8 @@
 import RPi.GPIO as GPIO #rasp pi or other GPIO pin hardware needed
 import time
-import json
 
 from translation.transcription import VoiceProcessor
+
 
 BUTTON_PIN=0 #add later
 GPIO.setmode(GPIO.BCM)

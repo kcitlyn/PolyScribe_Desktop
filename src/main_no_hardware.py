@@ -1,6 +1,6 @@
 from languages.languages import LanguageManager
 import utils
-
+import languages.speak as speak
 import sounddevice as sd
 
 def main():
@@ -12,6 +12,7 @@ def main():
     #instructions ask if they just want transcription (1) or both transcribed and translation version (2)
     if instruction == 1:
         utils.run_transcription(from_language, sample_rate, device_ID)
+        
     elif instruction == 2:
         utils.run_translation(from_language, sample_rate, device_ID)
     else:

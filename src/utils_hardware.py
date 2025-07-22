@@ -20,6 +20,7 @@ def run_translation(from_language, to_language, sample_rate, device_ID, translat
     transcriber = VoiceProcessor(from_language, sample_rate, device_ID)
     last_partial = ""
     translation_mode= translation_mode
+
     for chunk, is_final in transcriber.processing_audio():
         if translation_mode == 1:
             if is_final:

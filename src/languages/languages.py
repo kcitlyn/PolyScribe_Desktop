@@ -5,13 +5,12 @@ import requests
 
 class LanguageManager:
     data = {
-    #"language": ["language code", Model("path to language in files"), model url for installation (this is for vosk transcription)]
+    #"language": ["language code from argos translate", Model("path to language in files"), model url for installation (this is for vosk transcription)]
     #in order to find pathway to file, locate file and open in terminal; then type pwd and copy paste into below section
     "english": ["en", "/Users/kaitlynchen/rsp5/translator/src/vosk_models/vosk-model-en-us-0.22-lgraph"],
     "mandarin": ["zh", "/Users/kaitlynchen/rsp5/translator/src/vosk_models/vosk-model-small-cn-0.22"],
-    "cantonese": ["zh", "/Users/kaitlynchen/rsp5/translator/src/vosk_models/vosk-model-small-cn-0.22"], #double check its the same 
     "chinese": ["zh", "/Users/kaitlynchen/rsp5/translator/src/vosk_models/vosk-model-small-cn-0.22"],
-    "spanish": ["es"]
+    "spanish": ["es", "/Users/kaitlynchen/rsp5/translator/src/vosk_models/vosk-model-small-es-0.42"]
     #add specific languages to ur preferances
     }
 

@@ -3,7 +3,7 @@ import sounddevice as sd
 from languages.languages import LanguageManager
 from translation.text_translate import TextTranslator
 from translation.transcription import VoiceProcessor
-
+from languages.speak import Speak
 def prompt_choice(prompt, valid_options):
     while True:
         user_input = input(prompt).strip()
@@ -24,22 +24,34 @@ def get_instruction():
     ))
 
 def get_languages():
-    from_lang = prompt_choice("What language will you speak in? ", list(LanguageManager.data.keys())).lower()
-    return from_lang
+    return prompt_choice("What language will you speak in? ", list(LanguageManager.data.keys())).lower()
 
+def get_speaker_pref():
+    answer= prompt_choice("Do you want the output speech to be read aloud? (y or n) ", ["y", "n"])
+    if answer== "y":
+        speaker= Speak()
+        speaker.voice_setup()
+        return speaker
+    else:
+        return None
 def run_transcription(from_language, sample_rate, device_ID):
+    speaker = get_speaker_pref()
     transcriber = VoiceProcessor(from_language, sample_rate, device_ID)
+
     last_partial = ""
     for chunk, is_final in transcriber.processing_audio():  # assuming your generator yields (text, is_final)
         if is_final:
             print('\r' + chunk + ' ' * max(0, len(last_partial) - len(chunk)), end='', flush=True)
             last_partial = ""
             print(' ' * max(0, len(last_partial)), end='', flush=True)
+            if speaker:
+               speaker.speak(chunk)
         else:
             print('\r' + chunk + ' ' * (len(last_partial) - len(chunk)), end='', flush=True)
             last_partial = chunk
 
 def run_translation(from_language, sample_rate, device_ID):
+    speaker = get_speaker_pref()
     to_language = prompt_choice("What language do you want to translate into? ", list(LanguageManager.data.keys())).lower()
     mode = int(prompt_choice("Show both transcription and translation (1), or only translation (2)? ", ["1", "2"]))
     transcriber = VoiceProcessor(from_language, sample_rate, device_ID)
@@ -49,6 +61,8 @@ def run_translation(from_language, sample_rate, device_ID):
             if is_final:
                 print()  # newline after partials
                 print("Recognized:", chunk)
+                if speaker:
+                    speaker.speak(chunk)
             else:
                 print('\r' + chunk + ' ' * (len(last_partial) - len(chunk)), end='', flush=True)
                 last_partial = chunk
