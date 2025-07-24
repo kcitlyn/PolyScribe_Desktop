@@ -30,14 +30,15 @@ def get_languages():
 def get_speaker_pref(from_language, to_language):
     answer= prompt_choice("Do you want the output speech to be read aloud? (y or n) ", ["y", "n"])
     if answer== "y":
-        speed_of_voice= (int(prompt_choice("how many wpm do you want the voice to speak? (100-500 wpm) ",
-                                            [str(i) for i in range(100, 501)])))
+        speed_of_voice= (int(prompt_choice("how many wpm do you want the voice to speak? (50-500 wpm) ",
+                                            [str(i) for i in range(50, 501)])))
         volume=(int(prompt_choice("enter an integer between 0-100 for volume. ", [str(i) for i in range(101)])))/100 
         speaker= Speak(speed_of_voice, volume)
         voice_matches=speaker.get_voice_matches(from_language, to_language)
         print(voice_matches)
         if voice_matches:
-            voice_ID=prompt_choice("here are the choice you have based on the language selected. Choose a model (type the name exactly)", voice_matches)
+            voice_ID=prompt_choice("here are the choice you have based on the language selected. Choose a model (type the name exactly as it appears)  ",
+                                    voice_matches)
             speaker.set_voice_ID(voice_ID)
             return speaker
         else:
@@ -85,7 +86,7 @@ def run_translation(from_language, sample_rate, device_ID):
             for chunk, is_final in transcriber.processing_audio():
                 if is_final:
                     translator = TextTranslator(chunk, from_language, to_language)
-                    translated_chunk=translator.translate_text(speaker)
+                    translated_chunk=translator.translate_text()
                     if speaker: 
                         translation_chunks.append(translated_chunk)
         else:

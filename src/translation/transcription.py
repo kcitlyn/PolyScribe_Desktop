@@ -28,7 +28,7 @@ class VoiceProcessor():
         # Convert back to bytes
         return resampled.astype(np.int16).tobytes()
 
-    def callback(self, indata, status):
+    def callback(self, indata, frames, time, status):
         if status:
             print(status, file=sys.stderr) #prints a status error if problems detected with audio file
         resampled_data = self.resample_audio(bytes(indata))

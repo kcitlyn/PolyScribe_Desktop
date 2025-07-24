@@ -8,11 +8,9 @@ class TextTranslator:
             self.to_language= to_language
             self.from_language_code= LanguageManager.get_code(from_language)
             self.to_language_code= LanguageManager.get_code(to_language)
-
-    def translate_text(self, speaker):
+    def translate_text(self):
         chunk=translate.translate(self.text, self.from_language_code, self.to_language_code)
         print(chunk)
         return chunk
-               
     def model_exists():
         return True

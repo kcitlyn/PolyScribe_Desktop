@@ -1,7 +1,5 @@
 import pyttsx3
 import json
-import queue
-import threading
 
 from languages.languages import LanguageManager
 

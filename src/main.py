@@ -1,7 +1,7 @@
 from languages.languages import LanguageManager
 import utils
 import languages.speak as speak
-import sounddevice as sd
+
 
 def main():
     device_ID = utils.get_device_id()
