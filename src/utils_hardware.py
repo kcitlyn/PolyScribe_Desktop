@@ -1,6 +1,5 @@
 import sounddevice as sd
 
-from languages.languages import LanguageManager
 from translation.text_translate import TextTranslator
 from translation.transcription import VoiceProcessor
 
@@ -30,4 +29,4 @@ def run_translation(from_language, to_language, sample_rate, device_ID, translat
                 print('\r' + chunk + ' ' * (len(last_partial) - len(chunk)), end='', flush=True)
                 last_partial = chunk
         translator = TextTranslator(chunk, from_language, to_language)
-        translator.translate_text()
+    

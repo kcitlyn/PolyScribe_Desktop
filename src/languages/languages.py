@@ -1,7 +1,4 @@
-from vosk import Model, KaldiRecognizer
-from argostranslate import translate, package
-import os
-import requests
+from vosk import Model
 
 class LanguageManager:
     data = {

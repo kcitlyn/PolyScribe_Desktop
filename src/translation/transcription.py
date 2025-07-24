@@ -4,7 +4,7 @@ import queue
 import sounddevice as sd
 from vosk import KaldiRecognizer
 
-#resample libraries - # vosk library requires microphone inputs to only come in at a sample rate of 16kHz, this class helps readjust audio
+# vosk library requires microphone inputs to only come in at a sample rate of 16kHz, this library will help later in readjusting audio to fit standards
 import numpy as np
 from scipy.signal import resample_poly
 
@@ -28,7 +28,7 @@ class VoiceProcessor():
         # Convert back to bytes
         return resampled.astype(np.int16).tobytes()
 
-    def callback(self, indata, frames, time, status):
+    def callback(self, indata, status):
         if status:
             print(status, file=sys.stderr) #prints a status error if problems detected with audio file
         resampled_data = self.resample_audio(bytes(indata))
@@ -41,8 +41,6 @@ class VoiceProcessor():
             print("Listening... (Ctrl+C to stop)")
             last_partial = ""
             while True:
-                print("Say something...")
-            
                 data = self.queue.get() # grabs data from queue and also deletes as it processesq
                 if self.rec.AcceptWaveform(data):
                     result = self.rec.Result()
@@ -58,5 +56,4 @@ class VoiceProcessor():
                     if partial_text != "" and partial_text != last_partial:
                         last_partial = partial_text
                         yield (partial_text, False)  # False = partial
-
                 

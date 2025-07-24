@@ -2,5 +2,6 @@
     "voice_type": 7,
     "speed_of_voice": 200,
     "volume": 10,
-    "save":false
+    "save":false,
+    "voice_ID": "com.apple.speech.synthesis.voice.Albert"
 }
