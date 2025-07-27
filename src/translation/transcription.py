@@ -23,7 +23,7 @@ class VoiceProcessor():
     def resample_audio(self, indata_bytes):
         # Convert bytes to numpy int16 array
         audio_np = np.frombuffer(indata_bytes, dtype=np.int16)
-        # Resample from input_samplerate to self.sample_rate (e.g. x Hz to 16000)
+        # Resample from input_samplerate to self.sample_rate since vosk only works for 16kHz audio (e.g. x Hz to 16000)
         resampled = resample_poly(audio_np, self.ideal_sample_rate, self.input_sample_rate)
         # Convert back to bytes
         return resampled.astype(np.int16).tobytes()
@@ -38,22 +38,28 @@ class VoiceProcessor():
         # Start recording from mic
         with sd.RawInputStream(samplerate=self.input_sample_rate, blocksize=None, dtype='int16', device= self.device_ID, channels=1
                              ,callback=self.callback): #never_drop_input may buffer audio translation but makes sure no audio gets deleted; disable if u prefer speedy trasnlation over inaccraute fix later
-            print("Listening... (Ctrl+C to stop)")
+            print("Listening... (Ctrl+C to stop listening)")
             last_partial = ""
             while True:
-                data = self.queue.get() # grabs data from queue and also deletes as it processesq
-                if self.rec.AcceptWaveform(data):
-                    result = self.rec.Result()
-                    text = json.loads(result).get('text', '')
-                    if text:
-                        with self.queue.mutex:
-                            self.queue.queue.clear()
-                        yield (text, True)  # True = final
+                try:
+                    data = self.queue.get(timeout=.1) # grabs data from queue and also deletes as it processesq
+                except queue.Empty:
+                    continue
+                if data:
+                    if self.rec.AcceptWaveform(data):
+                        result = self.rec.Result()
+                        text = json.loads(result).get('text', '')
+                        if text:
+                            with self.queue.mutex:
+                                self.queue.queue.clear()
+                            yield (text, True)  # True = final
+                    else:
+                        partial = self.rec.PartialResult()
+                        partial_dict = json.loads(partial)
+                        partial_text = partial_dict.get('partial', '')
+                        if partial_text != "" and partial_text != last_partial:
+                            last_partial = partial_text
+                            yield (partial_text, False)  # False = partial
                 else:
-                    partial = self.rec.PartialResult()
-                    partial_dict = json.loads(partial)
-                    partial_text = partial_dict.get('partial', '')
-                    if partial_text != "" and partial_text != last_partial:
-                        last_partial = partial_text
-                        yield (partial_text, False)  # False = partial
+                    continue
                 

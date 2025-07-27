@@ -4,11 +4,9 @@ class LanguageManager:
     data = {
     #"language": ["language code from argos translate", Model("path to language in files"), model url for installation (this is for vosk transcription)]
     #in order to find pathway to file, locate file and open in terminal; then type pwd and copy paste into below section
-    "english": ["en", "/Users/kaitlynchen/rsp5/translator-desktop/src/vosk_models/vosk-model-en-us-0.22-lgraph"],
-    "mandarin": ["zh", "/Users/kaitlynchen/rsp5/translator-desktop/src/vosk_models/vosk-model-small-cn-0.22"],
-    "chinese": ["zh", "/Users/kaitlynchen/rsp5/translator-desktop/src/vosk_models/vosk-model-small-cn-0.22"],
-    "spanish": ["es", "/Users/kaitlynchen/rsp5/translator-desktop/src/vosk_models/vosk-model-small-es-0.42"]
-    #add specific languages to ur preferances
+    "english": ["en", r"C:\Users\kcitl\projects\personal\PolyScribe_Desktop\models\vosk_models\vosk-model-en-us-0.22-lgraph"],
+    "mandarin": ["zh", r"C:\Users\kcitl\projects\personal\PolyScribe_Desktop\models\vosk_models\vosk-model-cn-0.22"],
+    #add specific languages to ur preferances (visit https://alphacephei.com/vosk/models))
     }
 
     @staticmethod
