@@ -52,7 +52,9 @@ class Speak:
         self.engine.say(text)      # Queue the text
         self.engine.runAndWait()
 
-
-    def print_all_voices_available(self):
-        for voice in self.voices:
+    @staticmethod
+    def print_all_voices_available():
+        engine = pyttsx3.init()
+        voices = engine.getProperty('voices')
+        for voice in voices:
             print(voice.name)

@@ -23,15 +23,18 @@ PolyScribe is a lightweight desktop tool for fully offline live **speech transcr
    ```bash
    git clone https://github.com/your-username/PolyScribe.git
    cd PolyScribe
+   ```
 
 2. Set up virtual environment
     ```bash
     python3.11 -m venv venv
     source venv/bin/activate  # On Windows: .\venv\Scripts\activate.ps1
+    ```
 
 3. Install required packages
     ```bash
     pip install -r requirements.txt
+    ```
 
 4. Download and setup voice and translation models
     Create the following folder structure inside the provided models/ directory:
@@ -50,6 +53,7 @@ PolyScribe is a lightweight desktop tool for fully offline live **speech transcr
     Run this script once (and again only if you add new translation models into your translation_models folder):
     ```bash
     python install_translation_packages.py
+    ```
 
 6. (optional) Check available voice models depending on system
     The text-to-speech package used in this project (`pyttsx3`) relies on **voice packages locally installed on your device**.
@@ -79,6 +83,7 @@ PolyScribe is a lightweight desktop tool for fully offline live **speech transcr
 7. Run the application
   ```bash
     python3 main.py
+  ```
 
 8. Answer terminal prompts
   Follow the on-screen prompts to select your transcription and translation preferences. The program will then listen and respond accordingly.

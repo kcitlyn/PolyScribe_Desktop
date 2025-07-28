@@ -45,7 +45,6 @@ def get_speaker_pref(from_language, to_language):
             return speaker
         else:
             print("These are the language models available for your device. For more information, please read Github to install more language packs.")
-            speaker.print_all_voices_available()
             print("Unfortunately, the language you have chosen is not compatible with any voice models.")
             print("Translation or transcription will proceed as normal just without a voice")
             print("For more information on adding voice modules, visit ReadMe on Github.")
