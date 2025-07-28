@@ -46,8 +46,13 @@ class Speak:
                 voice_config["voice_ID"] = voice.id
                 self.engine.setProperty('voice', voice.id)  # Update immediately
                 return
-        print("Voice name not found.")
+        print("Voice not found.")
         
     def speak(self, text):
         self.engine.say(text)      # Queue the text
         self.engine.runAndWait()
+
+
+    def print_all_voices_available(self):
+        for voice in self.voices:
+            print(voice.name)

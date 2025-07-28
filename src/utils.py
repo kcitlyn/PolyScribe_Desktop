@@ -35,16 +35,20 @@ def get_speaker_pref(from_language, to_language):
         volume=(int(prompt_choice("enter an integer between 0-100 for volume. ", [str(k) for k in range(101)])))/100 
         speaker= Speak(speed_of_voice, volume)
         voice_matches=speaker.get_voice_matches(from_language, to_language)
-        numbered_matches="\n".join(f"({k}) {match}" for k, match in enumerate(voice_matches))
-        print(numbered_matches)
         if voice_matches:
-            voice_ID_index=prompt_choice("here are the choice you have based on the language selected. Choose a model (type a number)",
+            numbered_matches="\n".join(f"({k}) {match}" for k, match in enumerate(voice_matches))
+            print(numbered_matches)
+            voice_ID_index=prompt_choice("here are the choice you have based on the language selected. Choose a model (type a number) ",
                                     list(str(k) for k in range(len(voice_matches))))
             voice_ID=voice_matches[int(voice_ID_index)]
             speaker.set_voice_ID(voice_ID)
             return speaker
         else:
-            print("unfortunately, the language you have chosen is not compatible with any voice models. translation or transcription will proceed as normal just without a voice")
+            print("These are the language models available for your device. For more information, please read Github to install more language packs.")
+            speaker.print_all_voices_available()
+            print("Unfortunately, the language you have chosen is not compatible with any voice models.")
+            print("Translation or transcription will proceed as normal just without a voice")
+            print("For more information on adding voice modules, visit ReadMe on Github.")
     if answer == "n":
         print("Okay! Transcribing and/or translating now")
 
@@ -67,7 +71,7 @@ def run_transcription(from_language, sample_rate, device_ID, purpose):
                 print('\r' + chunk + ' ' * (len(last_partial) - len(chunk)), end='', flush=True)
                 last_partial = chunk
     except KeyboardInterrupt:
-        print("\nEnding transcription as per user request.")
+        print("Ending transcription as per user request.")
     if speaker and purpose == "transcription" and transcription_chunks:
         full_text=" ".join(transcription_chunks)
         run_speech(transcription_chunks, speaker)

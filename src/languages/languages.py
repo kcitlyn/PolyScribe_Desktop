@@ -1,12 +1,14 @@
 from vosk import Model
+from pathlib import Path
 
 class LanguageManager:
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent 
     data = {
-    #"language": ["language code from argos translate", Model("path to language in files"), model url for installation (this is for vosk transcription)]
-    #in order to find pathway to file, locate file and open in terminal; then type pwd and copy paste into below section
-    "english": ["en", r"C:\Users\kcitl\projects\personal\PolyScribe_Desktop\models\vosk_models\vosk-model-en-us-0.22-lgraph"],
-    "mandarin": ["zh", r"C:\Users\kcitl\projects\personal\PolyScribe_Desktop\models\vosk_models\vosk-model-cn-0.22"],
-    #add specific languages to ur preferances (visit https://alphacephei.com/vosk/models))
+    #"language": ["language code from argos translate", relative model path to vosk language file]
+    #create a folder in models folder titled "vosk_models" and put all the languages you want to use and modify code
+    "english": ["en", BASE_DIR / "models" / "vosk_models" / "vosk-model-en-us-0.22-lgraph"], #example code
+    "mandarin": ["zh", BASE_DIR / "models" / "vosk_models" / "vosk-model-cn-0.22"],
+    #add specific languages based on your needs and preferances (visit https://alphacephei.com/vosk/models))
     }
 
     @staticmethod
@@ -21,5 +23,4 @@ class LanguageManager:
         model = LanguageManager.data.get(lang, [None, None])[1]
         if model is None:
             raise ValueError(f"No model was found for language '{lang}'. Look at LibreTranslate models for more information.")
-        return Model(model)
-    
+        return Model(str(model))
