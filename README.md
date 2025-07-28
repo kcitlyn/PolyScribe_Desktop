@@ -95,19 +95,19 @@ PolyScribe is a lightweight desktop tool for fully offline live **speech transcr
 
 ## Example Folder Structure
 
-  PolyScribe/
-  ├── main.py
-  ├── install_translation_packages.py
-  ├── requirements.txt
-  ├── models/
-  │   ├── vosk_models/
-  │   │   └── vosk-model-small-en-us-0.15/
-  │   └── translation_models/
-  │       └── en_es/
-  ├── languages/
-  ├── translation/
-  ├── licenses/
-  └── ...
+  PolyScribe/  
+  ├── main.py  
+  ├── install_translation_packages.py  
+  ├── requirements.txt  
+  ├── models/  
+  │   ├── vosk_models/  
+  │   │   └── vosk-model-small-en-us-0.15/  
+  │   └── translation_models/  
+  │       └── en_es/  
+  ├── languages/  
+  ├── translation/  
+  ├── licenses/  
+  └── ...  
 
 ## Licenses and Third-Party Software
 
