@@ -116,4 +116,4 @@ This project uses the following open-source libraries:
 - [Vosk](https://github.com/alphacep/vosk-api) - Speech recognition toolkit, licensed under the [Apache License 2.0](./third_party/vosk-api-LICENSE.txt) 
 - [Argos Translate](https://github.com/argosopentech/argos-translate) - Machine translation library, licensed under the [GNU General Public License v3.0](./third_party/argostranslate-LICENSE.txt) 
 
-See the licenses/ folder for full license texts.
+See the third_party/ folder for full license texts.
