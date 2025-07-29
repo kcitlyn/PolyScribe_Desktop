@@ -1,11 +1,11 @@
 # PolyScribe
 
-PolyScribe is a lightweight desktop tool for fully offline live **speech transcription** and **translation**, powered by [Vosk](https://alphacephei.com/vosk/) and [Argos Translate](https://www.argosopentech.com/). It allows users to speak into their microphone and receive live transcriptions and/or translations spoken out loud, based on customizable language preferences.
+PolyScribe is a lightweight desktop tool for fully offline live **speech transcription** and **translation**, powered by [Vosk](https://alphacephei.com/vosk/) and [Argos Translate](https://www.argosopentech.com/). It allows users to speak into their microphone and receive live transcriptions and/or translations spoken out loud (or not), based on customizable language preferences. At the moment everything runs from terminal but a GUI is incoming in the near future! :D
 
 ## Features
 
 - 🎙️ Real-time speech recognition (fully offline)
-- 🌐 Translate spoken language into another language
+- 🌐 Translate spoken language into another language (supports 20+ languages)
 - 🔊 Text-to-speech output of transcribed or translated text
 - 🧠 Built using Vosk + Argos Translate
 - ⚙️ Customizable models and preferences
@@ -38,24 +38,25 @@ PolyScribe is a lightweight desktop tool for fully offline live **speech transcr
 
 4. Download and setup voice and translation models
     Create the following folder structure inside the provided models/ directory:
-    models/
-    ├── vosk_models/
-    └── translation_models/
-    Download Vosk models from:
+    models/  
+    ├── vosk_models/  
+    └── translation_models/  
+    Download Vosk models from:  
     - https://alphacephei.com/vosk/models
 
     Download Argos Translate models from:
     - https://www.argosopentech.com/argospm/index/
 
-    Place the downloaded model folders into their respective directories as-is. Keep the original folder names and structure!!
+    Place the downloaded model folders into their respective directories as-is. Keep the original folder names and structure for code to work. Additionally, download the files based on your use-case situation.
+    Usually, the larger the model (for vosk) the more accurate the TTS is! :D
 
-5. Install translation packages
+6. Install translation packages
     Run this script once (and again only if you add new translation models into your translation_models folder):
     ```bash
     python install_translation_packages.py
     ```
 
-6. (optional) Check available voice models depending on system
+7. (optional) Check available voice models depending on system
     The text-to-speech package used in this project (`pyttsx3`) relies on **voice packages locally installed on your device**.
 
 - **macOS:**  
@@ -117,3 +118,5 @@ This project uses the following open-source libraries:
 - [Argos Translate](https://github.com/argosopentech/argos-translate) - Machine translation library, licensed under the [GNU General Public License v3.0](./third_party/argostranslate-LICENSE.txt) 
 
 See the third_party/ folder for full license texts.
+
+If you found this project helpful or interesting, I’d really appreciate it if you gave it a ⭐! Thank you so much for checking it out and using PolyScribe! If you run into any issues, have suggestions, or want to contribute, feel free to open an issue, submit a pull request, or reach out via email— I’d love to hear from you!
