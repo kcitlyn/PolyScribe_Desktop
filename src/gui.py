@@ -74,8 +74,7 @@ class PolyScribeApp(tk.Tk):
         theme_box = self._reg(tk.Frame(header), "bg")
         theme_box.pack(side=tk.RIGHT)
         self._reg(tk.Label(theme_box, text="Theme", font=FONT_SMALL), "subtext").pack(anchor="e")
-        current = THEMES[self.theme_name]
-        self.theme_var = tk.StringVar(value=f"{current['emoji']} {self.theme_name}")
+        self.theme_var = tk.StringVar(value=self.theme_name)
         theme_combo = ttk.Combobox(theme_box, textvariable=self.theme_var,
                                    values=theme_display_names(), state="readonly",
                                    width=16, font=FONT_SMALL)
