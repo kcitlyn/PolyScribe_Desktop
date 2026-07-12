@@ -14,6 +14,7 @@ from zipfile import ZipFile
 
 from languages.languages import LanguageManager, VOSK_MODELS_DIR, TRANSLATION_MODELS_DIR
 from vosk_catalog import VOSK_MODELS, models_by_language, find_model
+from fuzzy_search import search_models, search_argos_packages
 from widgets import PillButton, Card
 
 ARGOS_INDEX_URL = "https://raw.githubusercontent.com/argosopentech/argospm-index/main/index.json"
@@ -75,6 +76,16 @@ class ModelManagerFrame(tk.Frame):
 
         filter_bar = self._reg(tk.Frame(parent), "surface")
         filter_bar.pack(fill=tk.X, padx=14, pady=(2, 4))
+
+        # Fuzzy search box — typo-tolerant, e.g. "japanse" finds Japanese
+        self._reg(tk.Label(filter_bar, text="Search:", font=("Helvetica", 11)),
+                  "label_on_surface").pack(side=tk.LEFT, padx=(0, 4))
+        self.vosk_search_var = tk.StringVar()
+        self.vosk_search_entry = tk.Entry(filter_bar, textvariable=self.vosk_search_var,
+                                          font=("Helvetica", 12), width=18,
+                                          relief=tk.FLAT, highlightthickness=1)
+        self.vosk_search_entry.pack(side=tk.LEFT, padx=(0, 12), ipady=3)
+        self.vosk_search_entry.bind("<KeyRelease>", lambda e: self._populate_vosk_tree())
 
         self._reg(tk.Label(filter_bar, text="Language:", font=("Helvetica", 11)),
                   "label_on_surface").pack(side=tk.LEFT, padx=(0, 4))
@@ -150,7 +161,10 @@ class ModelManagerFrame(tk.Frame):
         size_filter = self.vosk_size_filter.get()
         installed_only = self.vosk_installed_only.get()
 
-        for model in VOSK_MODELS:
+        # Fuzzy search runs first so results come back relevance-ranked
+        candidates = search_models(self.vosk_search_var.get(), VOSK_MODELS)
+
+        for model in candidates:
             if lang_filter != "All" and model["lang"] != lang_filter:
                 continue
             if size_filter != "All" and model["quality"] != size_filter:
@@ -233,6 +247,15 @@ class ModelManagerFrame(tk.Frame):
         self._reg(tk.Label(top, text="Translation (Argos Translate)",
                            font=("Helvetica", 13, "bold")), "label_on_surface").pack(side=tk.LEFT)
 
+        self._reg(tk.Label(top, text="Search:", font=("Helvetica", 11)),
+                  "label_on_surface").pack(side=tk.LEFT, padx=(20, 4))
+        self.argos_search_var = tk.StringVar()
+        self.argos_search_entry = tk.Entry(top, textvariable=self.argos_search_var,
+                                           font=("Helvetica", 12), width=18,
+                                           relief=tk.FLAT, highlightthickness=1)
+        self.argos_search_entry.pack(side=tk.LEFT, ipady=3)
+        self.argos_search_entry.bind("<KeyRelease>", lambda e: self._populate_argos_tree())
+
         cols = ("pair", "size", "status")
         self.argos_tree = ttk.Treeview(parent, columns=cols, show="headings", height=5)
         self.argos_tree.heading("pair", text="Language Pair")
@@ -270,7 +293,10 @@ class ModelManagerFrame(tk.Frame):
     def _populate_argos_tree(self):
         tree = self.argos_tree
         tree.delete(*tree.get_children())
-        for i, pkg in enumerate(self.argos_packages):
+        # iid is the index into self.argos_packages, stable across filtering
+        visible = search_argos_packages(self.argos_search_var.get(), self.argos_packages)
+        for pkg in visible:
+            i = self.argos_packages.index(pkg)
             from_name = pkg.get("from_name", pkg.get("from_code", "?"))
             to_name = pkg.get("to_name", pkg.get("to_code", "?"))
             pair = f"{from_name} → {to_name}"
@@ -321,13 +347,17 @@ class ModelManagerFrame(tk.Frame):
             from argostranslate import package
             package.install_from_path(str(out_path))
             self._set_progress(100, f"Done — {filename} installed")
-            self.after(0, lambda: self.argos_tree.set(iid, "status", "✓ Installed"))
+            self.after(0, lambda: self._mark_argos_installed(iid))
         except Exception as e:
             self._set_progress(0, f"Error: {e}")
 
     # ====================================================================
     # Helpers
     # ====================================================================
+
+    def _mark_argos_installed(self, iid):
+        if self.argos_tree.exists(iid):  # row may be hidden by an active search
+            self.argos_tree.set(iid, "status", "✓ Installed")
 
     def _set_progress(self, pct, msg):
         self.after(0, lambda: self.progress_var.set(pct))
@@ -358,6 +388,11 @@ class ModelManagerFrame(tk.Frame):
             card.apply_theme(palette)
         for pill in self._pills:
             pill.apply_theme(palette)
+        for entry in (self.vosk_search_entry, self.argos_search_entry):
+            entry.configure(bg=palette["surface2"], fg=palette["text"],
+                            insertbackground=palette["text"],
+                            highlightbackground=palette["border"],
+                            highlightcolor=palette["accent"])
 
     @staticmethod
     def _fmt_size(nbytes):
