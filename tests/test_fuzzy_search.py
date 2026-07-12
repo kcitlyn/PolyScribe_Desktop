@@ -49,10 +49,11 @@ class TestSearchArgosPackages:
         {"from_name": "English", "to_name": "Spanish", "from_code": "en", "to_code": "es"},
         {"from_name": "English", "to_name": "Japanese", "from_code": "en", "to_code": "ja"},
         {"from_name": "French", "to_name": "English", "from_code": "fr", "to_code": "en"},
+        {"from_name": "Danish", "to_name": "English", "from_code": "da", "to_code": "en"},
     ]
 
     def test_empty_returns_all(self):
-        assert len(search_argos_packages("", self.PACKAGES)) == 3
+        assert len(search_argos_packages("", self.PACKAGES)) == 4
 
     def test_by_language(self):
         results = search_argos_packages("spanish", self.PACKAGES)
@@ -66,4 +67,15 @@ class TestSearchArgosPackages:
     def test_pair_query(self):
         results = search_argos_packages("french english", self.PACKAGES)
         assert results
+        assert results[0]["from_name"] == "French"
+
+    def test_no_false_positive_spanish_danish(self):
+        """'spanish' should not match 'Danish' despite shared substring."""
+        results = search_argos_packages("spanish", self.PACKAGES)
+        assert all(p.get("from_name") != "Danish" and p.get("to_name") != "Danish"
+                   for p in results), f"Danish falsely matched: {results}"
+
+    def test_language_code_search(self):
+        results = search_argos_packages("fr", self.PACKAGES)
+        assert len(results) == 1
         assert results[0]["from_name"] == "French"
