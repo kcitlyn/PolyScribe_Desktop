@@ -1,13 +1,26 @@
-# Ignore Python cache files
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
 
-# Ignore virtual environment folder
+# Virtual environments
 venv/
+.venv/
 
-# Ignore personal translation and vosk model downloads
-translation_models/
-vosk_models/
+# Models (large binary downloads)
+models/vosk_models/
+models/translation_models/
 
-# Ignore system files
+# System files
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test/CI
+.pytest_cache/
