@@ -10,9 +10,11 @@ build/
 venv/
 .venv/
 
-# Models (large binary downloads)
-models/vosk_models/
-models/translation_models/
+# Models (large binary downloads, keep the .gitkeep placeholders)
+models/vosk_models/*
+!models/vosk_models/.gitkeep
+models/translation_models/*
+!models/translation_models/.gitkeep
 
 # System files
 .DS_Store
