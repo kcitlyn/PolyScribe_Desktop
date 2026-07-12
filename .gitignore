@@ -24,5 +24,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+# User settings (theme preference, etc.)
+src/settings.json
+
 # Test/CI
 .pytest_cache/

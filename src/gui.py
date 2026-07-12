@@ -13,144 +13,270 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import sounddevice as sd
-from languages.languages import LanguageManager, VOSK_MODELS_DIR
+from languages.languages import LanguageManager
 from translation.text_translate import TextTranslator
 from translation.transcription import VoiceProcessor
 from languages.speak import Speak
+import themes
+from themes import THEMES, theme_display_names, theme_from_display_name
+from widgets import PillButton, Card
 
-# Ensure we scan available models
 LanguageManager.refresh()
+
+FONT_BODY = ("Helvetica", 13)
+FONT_SMALL = ("Helvetica", 11)
+FONT_TITLE = ("Helvetica", 26, "bold")
+FONT_SUBTITLE = ("Helvetica", 12)
+FONT_MONO = ("Menlo", 14)
 
 
 class PolyScribeApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("PolyScribe — Offline Speech Transcription & Translation")
-        self.geometry("900x650")
-        self.minsize(700, 500)
-        self.configure(bg="#1e1e2e")
+        self.title("PolyScribe")
+        self.geometry("980x720")
+        self.minsize(780, 560)
 
-        style = ttk.Style(self)
-        style.theme_use("clam")
-        self._configure_styles(style)
+        self.theme_name = themes.load_theme_name()
 
         self._running = False
         self._thread = None
-        self._transcriber = None
 
-        # Tab container
-        notebook = ttk.Notebook(self)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self._themed_widgets = []   # (widget, role) pairs re-colored on theme change
+        self._cards = []
+        self._pills = []
 
-        self.transcribe_frame = ttk.Frame(notebook, style="TFrame")
-        self.models_frame = ttk.Frame(notebook, style="TFrame")
-        notebook.add(self.transcribe_frame, text="  Transcribe / Translate  ")
-        notebook.add(self.models_frame, text="  Model Manager  ")
+        self._build_layout()
+        self.apply_theme(self.theme_name)
+
+    # ------------------------------------------------------------------
+    # Layout
+    # ------------------------------------------------------------------
+
+    def _reg(self, widget, role):
+        """Register a widget to be re-colored when the theme changes."""
+        self._themed_widgets.append((widget, role))
+        return widget
+
+    def _build_layout(self):
+        # ----- Header bar -----
+        header = self._reg(tk.Frame(self), "bg")
+        header.pack(fill=tk.X, padx=24, pady=(18, 6))
+
+        title_box = self._reg(tk.Frame(header), "bg")
+        title_box.pack(side=tk.LEFT)
+        self._reg(tk.Label(title_box, text="PolyScribe", font=FONT_TITLE, anchor="w"),
+                  "title").pack(anchor="w")
+        self._reg(tk.Label(title_box, text="Offline speech transcription & translation",
+                           font=FONT_SUBTITLE, anchor="w"), "subtext").pack(anchor="w")
+
+        # Theme picker (top-right)
+        theme_box = self._reg(tk.Frame(header), "bg")
+        theme_box.pack(side=tk.RIGHT)
+        self._reg(tk.Label(theme_box, text="Theme", font=FONT_SMALL), "subtext").pack(anchor="e")
+        current = THEMES[self.theme_name]
+        self.theme_var = tk.StringVar(value=f"{current['emoji']} {self.theme_name}")
+        theme_combo = ttk.Combobox(theme_box, textvariable=self.theme_var,
+                                   values=theme_display_names(), state="readonly",
+                                   width=16, font=FONT_SMALL)
+        theme_combo.pack()
+        theme_combo.bind("<<ComboboxSelected>>", self._on_theme_change)
+
+        # ----- Tabs -----
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=24, pady=(6, 18))
+
+        self.transcribe_frame = self._reg(tk.Frame(self.notebook), "bg")
+        self.models_frame = self._reg(tk.Frame(self.notebook), "bg")
+        self.notebook.add(self.transcribe_frame, text="  🎙  Transcribe  ")
+        self.notebook.add(self.models_frame, text="  📦  Models  ")
 
         self._build_transcribe_tab()
         self._build_model_manager_tab()
 
-    # ----- Styles -----
-
-    def _configure_styles(self, style):
-        bg = "#1e1e2e"
-        fg = "#cdd6f4"
-        accent = "#89b4fa"
-        surface = "#313244"
-        style.configure("TFrame", background=bg)
-        style.configure("TLabel", background=bg, foreground=fg, font=("Segoe UI", 11))
-        style.configure("Title.TLabel", background=bg, foreground=accent, font=("Segoe UI", 16, "bold"))
-        style.configure("TButton", font=("Segoe UI", 11, "bold"), padding=8)
-        style.map("TButton", background=[("active", accent)])
-        style.configure("TCombobox", font=("Segoe UI", 11))
-        style.configure("TNotebook", background=bg)
-        style.configure("TNotebook.Tab", font=("Segoe UI", 10, "bold"), padding=[12, 4])
-
-    # ----- Transcribe tab -----
-
     def _build_transcribe_tab(self):
         frame = self.transcribe_frame
-        ttk.Label(frame, text="PolyScribe", style="Title.TLabel").pack(pady=(10, 2))
-        ttk.Label(frame, text="Real-time offline speech recognition & translation").pack(pady=(0, 10))
 
-        controls = ttk.Frame(frame, style="TFrame")
-        controls.pack(fill=tk.X, padx=20)
+        # ----- Settings card -----
+        card = Card(frame)
+        card.pack(fill=tk.X, padx=4, pady=(12, 8))
+        self._cards.append(card)
+        inner = self._reg(tk.Frame(card), "surface")
+        inner.pack(fill=tk.X, padx=18, pady=14)
+
+        def field(parent, label_text, col, row=0, colspan=1):
+            box = self._reg(tk.Frame(parent), "surface")
+            box.grid(row=row, column=col, columnspan=colspan, padx=10, pady=4, sticky="w")
+            self._reg(tk.Label(box, text=label_text, font=FONT_SMALL), "label_on_surface").pack(anchor="w")
+            return box
 
         # Mode
-        ttk.Label(controls, text="Mode:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        mode_box = field(inner, "MODE", 0)
         self.mode_var = tk.StringVar(value="transcription")
-        mode_combo = ttk.Combobox(controls, textvariable=self.mode_var,
-                                  values=["transcription", "translation"], state="readonly", width=15)
-        mode_combo.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-        mode_combo.bind("<<ComboboxSelected>>", self._on_mode_change)
+        mode_combo = ttk.Combobox(mode_box, textvariable=self.mode_var,
+                                  values=["transcription", "translation"],
+                                  state="readonly", width=13, font=FONT_BODY)
+        mode_combo.pack()
+        mode_combo.bind("<<ComboboxSelected>>", lambda e: self._toggle_to_lang())
 
-        # Source language
-        ttk.Label(controls, text="From:").grid(row=0, column=2, padx=5, pady=5, sticky="e")
+        # From language
         langs = sorted(LanguageManager.data.keys())
+        from_box = field(inner, "SPEAK IN", 1)
         self.from_lang_var = tk.StringVar(value=langs[0] if langs else "")
-        self.from_combo = ttk.Combobox(controls, textvariable=self.from_lang_var,
-                                       values=langs, state="readonly", width=14)
-        self.from_combo.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+        self.from_combo = ttk.Combobox(from_box, textvariable=self.from_lang_var,
+                                       values=langs, state="readonly", width=13, font=FONT_BODY)
+        self.from_combo.pack()
 
-        # Target language
-        self.to_label = ttk.Label(controls, text="To:")
-        self.to_label.grid(row=0, column=4, padx=5, pady=5, sticky="e")
+        # To language
+        to_box = field(inner, "TRANSLATE TO", 2)
         self.to_lang_var = tk.StringVar(value=langs[1] if len(langs) > 1 else "")
-        self.to_combo = ttk.Combobox(controls, textvariable=self.to_lang_var,
-                                     values=langs, state="readonly", width=14)
-        self.to_combo.grid(row=0, column=5, padx=5, pady=5, sticky="w")
-        self._toggle_to_lang()
+        self.to_combo = ttk.Combobox(to_box, textvariable=self.to_lang_var,
+                                     values=langs, state="readonly", width=13, font=FONT_BODY)
+        self.to_combo.pack()
 
-        # Microphone
-        ttk.Label(controls, text="Mic:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        # Microphone (second row, wide)
+        mic_box = field(inner, "MICROPHONE", 0, row=1, colspan=2)
         input_devs = {i: d for i, d in enumerate(sd.query_devices()) if d['max_input_channels'] > 0}
         mic_names = [f"({i}) {d['name']}" for i, d in input_devs.items()]
         self.mic_ids = list(input_devs.keys())
         self.mic_var = tk.StringVar(value=mic_names[0] if mic_names else "")
-        mic_combo = ttk.Combobox(controls, textvariable=self.mic_var,
-                                 values=mic_names, state="readonly", width=40)
-        mic_combo.grid(row=1, column=1, columnspan=3, padx=5, pady=5, sticky="w")
+        ttk.Combobox(mic_box, textvariable=self.mic_var, values=mic_names,
+                     state="readonly", width=38, font=FONT_BODY).pack()
 
-        # TTS toggle
+        # TTS toggle (custom check, themed)
+        tts_box = field(inner, "READ ALOUD", 2, row=1)
         self.tts_var = tk.BooleanVar(value=False)
-        tts_check = ttk.Checkbutton(controls, text="Read aloud (TTS)", variable=self.tts_var)
-        tts_check.grid(row=1, column=4, columnspan=2, padx=5, pady=5, sticky="w")
+        self.tts_check = self._reg(
+            tk.Checkbutton(tts_box, text="Speak results", variable=self.tts_var,
+                           font=FONT_BODY, bd=0, highlightthickness=0),
+            "check_on_surface")
+        self.tts_check.pack(anchor="w")
 
-        # Start / Stop buttons
-        btn_frame = ttk.Frame(frame, style="TFrame")
-        btn_frame.pack(pady=10)
-        self.start_btn = ttk.Button(btn_frame, text="▶  Start", command=self._start)
-        self.start_btn.pack(side=tk.LEFT, padx=10)
-        self.stop_btn = ttk.Button(btn_frame, text="■  Stop", command=self._stop, state="disabled")
-        self.stop_btn.pack(side=tk.LEFT, padx=10)
-        self.clear_btn = ttk.Button(btn_frame, text="Clear", command=self._clear)
-        self.clear_btn.pack(side=tk.LEFT, padx=10)
-
-        # Output text area
-        self.output_text = tk.Text(frame, wrap=tk.WORD, font=("JetBrains Mono", 12),
-                                   bg="#11111b", fg="#cdd6f4", insertbackground="#cdd6f4",
-                                   relief=tk.FLAT, padx=10, pady=10, state="disabled")
-        self.output_text.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
-        self.output_text.tag_configure("partial", foreground="#6c7086")
-        self.output_text.tag_configure("final", foreground="#a6e3a1")
-        self.output_text.tag_configure("translated", foreground="#89b4fa")
-
-        # Status bar
-        self.status_var = tk.StringVar(value="Ready")
-        ttk.Label(frame, textvariable=self.status_var).pack(side=tk.BOTTOM, pady=2)
-
-    def _on_mode_change(self, event=None):
         self._toggle_to_lang()
+
+        # ----- Action buttons -----
+        btns = self._reg(tk.Frame(frame), "bg")
+        btns.pack(pady=10)
+        self.start_btn = PillButton(btns, "▶   Start listening", self._start, kind="primary")
+        self.start_btn.pack(side=tk.LEFT, padx=8)
+        self.stop_btn = PillButton(btns, "■   Stop", self._stop, kind="danger")
+        self.stop_btn.pack(side=tk.LEFT, padx=8)
+        self.stop_btn.set_enabled(False)
+        self.clear_btn = PillButton(btns, "Clear", self._clear, kind="ghost")
+        self.clear_btn.pack(side=tk.LEFT, padx=8)
+        self._pills += [self.start_btn, self.stop_btn, self.clear_btn]
+
+        # ----- Transcript card -----
+        out_card = Card(frame)
+        out_card.pack(fill=tk.BOTH, expand=True, padx=4, pady=(4, 6))
+        self._cards.append(out_card)
+
+        self.output_text = tk.Text(out_card, wrap=tk.WORD, font=FONT_MONO,
+                                   relief=tk.FLAT, padx=16, pady=14,
+                                   state="disabled", bd=0, highlightthickness=0)
+        self.output_text.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        # ----- Status bar -----
+        self.status_var = tk.StringVar(value="Ready — pick a language and press Start")
+        self._reg(tk.Label(frame, textvariable=self.status_var, font=FONT_SMALL),
+                  "subtext").pack(pady=(0, 8))
+
+    def _build_model_manager_tab(self):
+        from model_manager import ModelManagerFrame
+        self.model_manager = ModelManagerFrame(self.models_frame, self)
+        self.model_manager.pack(fill=tk.BOTH, expand=True)
+
+    # ------------------------------------------------------------------
+    # Theming
+    # ------------------------------------------------------------------
+
+    def _on_theme_change(self, event=None):
+        name = theme_from_display_name(self.theme_var.get())
+        self.apply_theme(name)
+        themes.save_theme_name(name)
+
+    def apply_theme(self, name):
+        self.theme_name = name
+        p = THEMES[name]
+        self.configure(bg=p["bg"])
+
+        # ttk styles (combobox, notebook, treeview, progressbar)
+        style = ttk.Style(self)
+        style.theme_use("clam")
+        style.configure("TNotebook", background=p["bg"], borderwidth=0)
+        style.configure("TNotebook.Tab", font=("Helvetica", 12, "bold"),
+                        padding=[16, 8], background=p["surface"],
+                        foreground=p["subtext"], borderwidth=0)
+        style.map("TNotebook.Tab",
+                  background=[("selected", p["accent"])],
+                  foreground=[("selected", "#ffffff")])
+        style.configure("TCombobox", fieldbackground=p["surface2"],
+                        background=p["surface2"], foreground=p["text"],
+                        arrowcolor=p["accent"], borderwidth=0,
+                        selectbackground=p["surface2"], selectforeground=p["text"])
+        style.map("TCombobox", fieldbackground=[("readonly", p["surface2"])],
+                  foreground=[("readonly", p["text"])])
+        self.option_add("*TCombobox*Listbox.background", p["surface"])
+        self.option_add("*TCombobox*Listbox.foreground", p["text"])
+        self.option_add("*TCombobox*Listbox.selectBackground", p["accent"])
+        self.option_add("*TCombobox*Listbox.selectForeground", "#ffffff")
+        style.configure("Treeview", background=p["surface"], fieldbackground=p["surface"],
+                        foreground=p["text"], borderwidth=0, font=FONT_BODY, rowheight=30)
+        style.configure("Treeview.Heading", background=p["surface2"],
+                        foreground=p["subtext"], font=("Helvetica", 11, "bold"),
+                        borderwidth=0)
+        style.map("Treeview", background=[("selected", p["accent"])],
+                  foreground=[("selected", "#ffffff")])
+        style.configure("TProgressbar", troughcolor=p["surface2"],
+                        background=p["accent"], borderwidth=0, thickness=8)
+
+        # Plain-tk widgets by role
+        for widget, role in self._themed_widgets:
+            try:
+                if role == "bg":
+                    widget.configure(bg=p["bg"])
+                elif role == "surface":
+                    widget.configure(bg=p["surface"])
+                elif role == "title":
+                    widget.configure(bg=p["bg"], fg=p["accent"])
+                elif role == "subtext":
+                    widget.configure(bg=p["bg"], fg=p["subtext"])
+                elif role == "label_on_surface":
+                    widget.configure(bg=p["surface"], fg=p["muted"])
+                elif role == "check_on_surface":
+                    widget.configure(bg=p["surface"], fg=p["text"],
+                                     activebackground=p["surface"],
+                                     activeforeground=p["text"],
+                                     selectcolor=p["surface2"])
+            except tk.TclError:
+                pass
+
+        for card in self._cards:
+            card.apply_theme(p)
+        for pill in self._pills:
+            pill.apply_theme(p)
+
+        # Transcript colors
+        self.output_text.configure(bg=p["surface"], fg=p["text"],
+                                   insertbackground=p["text"],
+                                   selectbackground=p["accent"])
+        self.output_text.tag_configure("partial", foreground=p["muted"])
+        self.output_text.tag_configure("final", foreground=p["success"])
+        self.output_text.tag_configure("translated", foreground=p["accent2"])
+
+        # Model manager tab re-theme
+        if hasattr(self, "model_manager"):
+            self.model_manager.apply_theme(p)
+
+    # ------------------------------------------------------------------
+    # Transcription logic
+    # ------------------------------------------------------------------
 
     def _toggle_to_lang(self):
         if self.mode_var.get() == "translation":
             self.to_combo.configure(state="readonly")
-            self.to_label.configure(foreground="#cdd6f4")
         else:
             self.to_combo.configure(state="disabled")
-            self.to_label.configure(foreground="#585b70")
-
-    # ----- Transcription logic -----
 
     def _start(self):
         if self._running:
@@ -158,8 +284,11 @@ class PolyScribeApp(tk.Tk):
         from_lang = self.from_lang_var.get()
         to_lang = self.to_lang_var.get()
         mode = self.mode_var.get()
-        mic_idx = self.mic_ids[list(self.mic_var.get()[1:]).index(")")]  # parse (N) ... -> N
-        # Actually parse the mic index properly
+
+        if not from_lang:
+            self._append_output("⚠ No speech model installed. "
+                                "Open the Models tab to download one.\n", "final")
+            return
         try:
             mic_idx = int(self.mic_var.get().split(")")[0].replace("(", ""))
         except (ValueError, IndexError):
@@ -168,16 +297,15 @@ class PolyScribeApp(tk.Tk):
         if mode == "translation" and not TextTranslator.model_exists(from_lang, to_lang):
             self._append_output(
                 f"⚠ No translation model installed for {from_lang} → {to_lang}.\n"
-                "Download one in the Model Manager tab or from "
-                "https://www.argosopentech.com/argospm/index/\n", "final")
+                "Download one in the Models tab.\n", "final")
             return
 
         sample_rate = sd.query_devices(mic_idx)['default_samplerate']
 
         self._running = True
-        self.start_btn.configure(state="disabled")
-        self.stop_btn.configure(state="normal")
-        self.status_var.set("Listening…")
+        self.start_btn.set_enabled(False)
+        self.stop_btn.set_enabled(True)
+        self.status_var.set("Listening…  🎙")
 
         self._thread = threading.Thread(
             target=self._listen_loop,
@@ -187,15 +315,14 @@ class PolyScribeApp(tk.Tk):
         self._thread.start()
 
     def _listen_loop(self, from_lang, to_lang, mode, sample_rate, device_id):
-        self._transcriber = VoiceProcessor(from_lang, sample_rate, device_id)
         try:
-            for chunk, is_final in self._transcriber.processing_audio():
+            transcriber = VoiceProcessor(from_lang, sample_rate, device_id)
+            for chunk, is_final in transcriber.processing_audio():
                 if not self._running:
                     break
                 if is_final:
                     if mode == "translation":
-                        translator = TextTranslator(chunk, from_lang, to_lang)
-                        translated = translator.translate_text()
+                        translated = TextTranslator(chunk, from_lang, to_lang).translate_text()
                         self.after(0, self._show_final, chunk, translated)
                     else:
                         self.after(0, self._show_final, chunk, None)
@@ -208,7 +335,6 @@ class PolyScribeApp(tk.Tk):
 
     def _show_partial(self, text):
         self.output_text.configure(state="normal")
-        # Delete any existing partial line
         if self.output_text.tag_ranges("partial"):
             self.output_text.delete("partial.first", "partial.last")
         self.output_text.insert(tk.END, text, "partial")
@@ -217,7 +343,6 @@ class PolyScribeApp(tk.Tk):
 
     def _show_final(self, text, translated=None):
         self.output_text.configure(state="normal")
-        # Remove partial text
         if self.output_text.tag_ranges("partial"):
             self.output_text.delete("partial.first", "partial.last")
         self.output_text.insert(tk.END, text + "\n", "final")
@@ -226,15 +351,13 @@ class PolyScribeApp(tk.Tk):
         self.output_text.see(tk.END)
         self.output_text.configure(state="disabled")
 
-        # TTS in background
         if self.tts_var.get():
             speak_text = translated if translated else text
             threading.Thread(target=self._speak, args=(speak_text,), daemon=True).start()
 
     def _speak(self, text):
         try:
-            speaker = Speak(200, 0.8)
-            speaker.speak(text)
+            Speak(200, 0.8).speak(text)
         except Exception:
             pass  # TTS failure shouldn't crash the app
 
@@ -244,10 +367,9 @@ class PolyScribeApp(tk.Tk):
 
     def _on_stopped(self):
         self._running = False
-        self._transcriber = None
-        self.start_btn.configure(state="normal")
-        self.stop_btn.configure(state="disabled")
-        self.status_var.set("Stopped")
+        self.start_btn.set_enabled(True)
+        self.stop_btn.set_enabled(False)
+        self.status_var.set("Stopped — press Start to listen again")
 
     def _clear(self):
         self.output_text.configure(state="normal")
@@ -260,11 +382,14 @@ class PolyScribeApp(tk.Tk):
         self.output_text.see(tk.END)
         self.output_text.configure(state="disabled")
 
-    # ----- Model Manager tab -----
-
-    def _build_model_manager_tab(self):
-        from model_manager import ModelManagerFrame
-        ModelManagerFrame(self.models_frame, self).pack(fill=tk.BOTH, expand=True)
+    def refresh_languages(self):
+        """Called by the model manager after a download completes."""
+        LanguageManager.refresh()
+        langs = sorted(LanguageManager.data.keys())
+        self.from_combo.configure(values=langs)
+        self.to_combo.configure(values=langs)
+        if langs and not self.from_lang_var.get():
+            self.from_lang_var.set(langs[0])
 
 
 if __name__ == "__main__":

@@ -12,8 +12,8 @@ from urllib.request import urlopen, Request
 from zipfile import ZipFile
 
 from languages.languages import LanguageManager, VOSK_MODELS_DIR, TRANSLATION_MODELS_DIR
+from widgets import PillButton, Card
 
-# Vosk model catalog (subset of most-used models — full list at alphacephei.com/vosk/models)
 VOSK_MODELS = [
     {"name": "vosk-model-small-en-us-0.15", "size": "40 MB", "lang": "English (US) — small",
      "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"},
@@ -57,66 +57,85 @@ VOSK_MODELS = [
      "url": "https://alphacephei.com/vosk/models/vosk-model-small-sv-rhasspy-0.15.zip"},
 ]
 
-# Argos translation packages — fetched live from their index if available.
 ARGOS_INDEX_URL = "https://raw.githubusercontent.com/argosopentech/argospm-index/main/index.json"
 
 
-class ModelManagerFrame(ttk.Frame):
+class ModelManagerFrame(tk.Frame):
     def __init__(self, parent, app):
-        super().__init__(parent, style="TFrame")
+        super().__init__(parent, bd=0, highlightthickness=0)
         self.app = app
+        self._themed_widgets = []
+        self._cards = []
+        self._pills = []
 
-        # Title
-        ttk.Label(self, text="Model Manager", style="Title.TLabel").pack(pady=(10, 2))
-        ttk.Label(self, text="Download speech & translation models directly").pack(pady=(0, 10))
+        # Title area
+        header = self._reg(tk.Frame(self), "bg")
+        header.pack(fill=tk.X, padx=4, pady=(12, 6))
+        self._reg(tk.Label(header, text="📦  Model Manager", font=("Helvetica", 18, "bold")),
+                  "title").pack(side=tk.LEFT)
+        self._reg(tk.Label(header, text="Download speech & translation models directly",
+                           font=("Helvetica", 11)), "subtext").pack(side=tk.LEFT, padx=14)
 
-        # Sub-notebook for Vosk vs Argos
-        sub_nb = ttk.Notebook(self)
-        sub_nb.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # Vosk section
+        vosk_card = Card(self)
+        vosk_card.pack(fill=tk.BOTH, expand=True, padx=4, pady=(6, 4))
+        self._cards.append(vosk_card)
+        self._build_vosk_list(vosk_card)
 
-        vosk_frame = ttk.Frame(sub_nb, style="TFrame")
-        argos_frame = ttk.Frame(sub_nb, style="TFrame")
-        sub_nb.add(vosk_frame, text="  Speech (Vosk)  ")
-        sub_nb.add(argos_frame, text="  Translation (Argos)  ")
+        # Argos section
+        argos_card = Card(self)
+        argos_card.pack(fill=tk.BOTH, expand=True, padx=4, pady=(4, 4))
+        self._cards.append(argos_card)
+        self._build_argos_list(argos_card)
 
-        self._build_vosk_list(vosk_frame)
-        self._build_argos_list(argos_frame)
-
-        # Progress area
+        # Progress
+        progress_frame = self._reg(tk.Frame(self), "bg")
+        progress_frame.pack(fill=tk.X, padx=10, pady=(4, 10))
         self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(self, variable=self.progress_var, maximum=100)
-        self.progress_bar.pack(fill=tk.X, padx=20, pady=(5, 2))
-        self.progress_label = ttk.Label(self, text="")
-        self.progress_label.pack(pady=(0, 10))
+        self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var,
+                                            maximum=100, length=400, mode="determinate")
+        self.progress_bar.pack(fill=tk.X, padx=4)
+        self.progress_label = self._reg(tk.Label(progress_frame, text="", font=("Helvetica", 11)),
+                                        "subtext")
+        self.progress_label.pack(pady=(2, 0))
 
-    # ----- Vosk models list -----
+    def _reg(self, widget, role):
+        self._themed_widgets.append((widget, role))
+        return widget
+
+    # ----- Vosk -----
 
     def _build_vosk_list(self, parent):
+        header = self._reg(tk.Frame(parent), "surface")
+        header.pack(fill=tk.X, padx=14, pady=(12, 4))
+        self._reg(tk.Label(header, text="🎙  Speech Recognition (Vosk)",
+                           font=("Helvetica", 13, "bold")), "label_on_surface").pack(side=tk.LEFT)
+
         cols = ("language", "size", "status")
-        tree = ttk.Treeview(parent, columns=cols, show="headings", height=10)
+        tree = ttk.Treeview(parent, columns=cols, show="headings", height=6)
         tree.heading("language", text="Language / Quality")
         tree.heading("size", text="Size")
         tree.heading("status", text="Status")
         tree.column("language", width=250)
         tree.column("size", width=80, anchor="center")
-        tree.column("status", width=120, anchor="center")
+        tree.column("status", width=100, anchor="center")
 
         installed = {f.name for f in VOSK_MODELS_DIR.iterdir()} if VOSK_MODELS_DIR.is_dir() else set()
         for model in VOSK_MODELS:
             status = "✓ Installed" if model["name"] in installed else "—"
             tree.insert("", tk.END, iid=model["name"],
                         values=(model["lang"], model["size"], status))
-        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        tree.pack(fill=tk.BOTH, expand=True, padx=14, pady=4)
 
-        btn_frame = ttk.Frame(parent, style="TFrame")
-        btn_frame.pack(pady=5)
-        ttk.Button(btn_frame, text="Download Selected", command=lambda: self._download_vosk(tree)).pack(
-            side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Delete Selected", command=lambda: self._delete_vosk(tree)).pack(
-            side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Refresh", command=lambda: self._refresh_vosk(tree)).pack(
-            side=tk.LEFT, padx=5)
-
+        btn_frame = self._reg(tk.Frame(parent), "surface")
+        btn_frame.pack(padx=14, pady=(4, 12))
+        dl = PillButton(btn_frame, "⬇ Download", lambda: self._download_vosk(tree), kind="primary")
+        dl.pack(side=tk.LEFT, padx=4)
+        rm = PillButton(btn_frame, "🗑 Delete", lambda: self._delete_vosk(tree), kind="danger")
+        rm.pack(side=tk.LEFT, padx=4)
+        rf = PillButton(btn_frame, "↻ Refresh", lambda: self._refresh_vosk(tree), kind="ghost")
+        rf.pack(side=tk.LEFT, padx=4)
+        self._pills += [dl, rm, rf]
         self.vosk_tree = tree
 
     def _refresh_vosk(self, tree):
@@ -125,18 +144,16 @@ class ModelManagerFrame(ttk.Frame):
             status = "✓ Installed" if model["name"] in installed else "—"
             tree.set(model["name"], "status", status)
         LanguageManager.refresh()
-        self._refresh_main_combos()
+        self.app.refresh_languages()
 
     def _download_vosk(self, tree):
         selected = tree.selection()
         if not selected:
             messagebox.showinfo("No selection", "Select a model from the list first.")
             return
-        model_name = selected[0]
-        model_info = next((m for m in VOSK_MODELS if m["name"] == model_name), None)
-        if model_info is None:
-            return
-        threading.Thread(target=self._do_vosk_download, args=(model_info, tree), daemon=True).start()
+        model_info = next((m for m in VOSK_MODELS if m["name"] == selected[0]), None)
+        if model_info:
+            threading.Thread(target=self._do_vosk_download, args=(model_info, tree), daemon=True).start()
 
     def _do_vosk_download(self, model_info, tree):
         url = model_info["url"]
@@ -145,21 +162,20 @@ class ModelManagerFrame(ttk.Frame):
         try:
             VOSK_MODELS_DIR.mkdir(parents=True, exist_ok=True)
             req = Request(url, headers={"User-Agent": "PolyScribe/1.0"})
-            resp = urlopen(req, timeout=60)
+            resp = urlopen(req, timeout=120)
             total = int(resp.headers.get("Content-Length", 0))
             data = io.BytesIO()
             downloaded = 0
-            chunk_size = 1024 * 256
             while True:
-                chunk = resp.read(chunk_size)
+                chunk = resp.read(256 * 1024)
                 if not chunk:
                     break
                 data.write(chunk)
                 downloaded += len(chunk)
                 if total > 0:
-                    pct = downloaded / total * 100
-                    self._set_progress(pct, f"Downloading {name}… {downloaded // (1024*1024)} MB")
-            self._set_progress(95, f"Extracting {name}…")
+                    self._set_progress(downloaded / total * 90,
+                                       f"Downloading {name}… {downloaded // (1024*1024)} MB")
+            self._set_progress(92, f"Extracting {name}…")
             data.seek(0)
             with ZipFile(data) as zf:
                 zf.extractall(VOSK_MODELS_DIR)
@@ -173,37 +189,41 @@ class ModelManagerFrame(ttk.Frame):
         selected = tree.selection()
         if not selected:
             return
-        model_name = selected[0]
-        path = VOSK_MODELS_DIR / model_name
+        name = selected[0]
+        path = VOSK_MODELS_DIR / name
         if not path.is_dir():
-            messagebox.showinfo("Not installed", f"{model_name} is not installed.")
+            messagebox.showinfo("Not installed", f"{name} is not installed.")
             return
-        if messagebox.askyesno("Delete model", f"Delete {model_name}?\nThis cannot be undone."):
+        if messagebox.askyesno("Delete model", f"Delete {name}?\nThis cannot be undone."):
             shutil.rmtree(path)
             self._refresh_vosk(tree)
-            self._set_progress(0, f"Deleted {model_name}")
+            self._set_progress(0, f"Deleted {name}")
 
-    # ----- Argos translation models -----
+    # ----- Argos -----
 
     def _build_argos_list(self, parent):
+        header = self._reg(tk.Frame(parent), "surface")
+        header.pack(fill=tk.X, padx=14, pady=(12, 4))
+        self._reg(tk.Label(header, text="🌐  Translation (Argos)",
+                           font=("Helvetica", 13, "bold")), "label_on_surface").pack(side=tk.LEFT)
+
         cols = ("pair", "size", "status")
-        tree = ttk.Treeview(parent, columns=cols, show="headings", height=10)
+        tree = ttk.Treeview(parent, columns=cols, show="headings", height=5)
         tree.heading("pair", text="Language Pair")
         tree.heading("size", text="Size")
         tree.heading("status", text="Status")
         tree.column("pair", width=250)
         tree.column("size", width=80, anchor="center")
-        tree.column("status", width=120, anchor="center")
-        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        tree.column("status", width=100, anchor="center")
+        tree.pack(fill=tk.BOTH, expand=True, padx=14, pady=4)
 
-        btn_frame = ttk.Frame(parent, style="TFrame")
-        btn_frame.pack(pady=5)
-        ttk.Button(btn_frame, text="Fetch Index", command=lambda: self._fetch_argos_index(tree)).pack(
-            side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="Download Selected", command=lambda: self._download_argos(tree)).pack(
-            side=tk.LEFT, padx=5)
-        ttk.Label(btn_frame, text="(Click Fetch Index to load available packages)").pack(side=tk.LEFT, padx=10)
-
+        btn_frame = self._reg(tk.Frame(parent), "surface")
+        btn_frame.pack(padx=14, pady=(4, 12))
+        fetch = PillButton(btn_frame, "🔍 Fetch Index", lambda: self._fetch_argos_index(tree), kind="ghost")
+        fetch.pack(side=tk.LEFT, padx=4)
+        dl = PillButton(btn_frame, "⬇ Download", lambda: self._download_argos(tree), kind="primary")
+        dl.pack(side=tk.LEFT, padx=4)
+        self._pills += [fetch, dl]
         self.argos_tree = tree
         self.argos_packages = []
 
@@ -217,43 +237,29 @@ class ModelManagerFrame(ttk.Frame):
             resp = urlopen(req, timeout=30)
             data = json.loads(resp.read())
             self.argos_packages = data if isinstance(data, list) else []
-            self._set_progress(100, f"Loaded {len(self.argos_packages)} packages")
+            self._set_progress(100, f"Loaded {len(self.argos_packages)} translation packages")
             self.after(0, lambda: self._populate_argos_tree(tree))
         except Exception as e:
             self._set_progress(0, f"Error fetching index: {e}")
 
     def _populate_argos_tree(self, tree):
         tree.delete(*tree.get_children())
-        # Check which .argosmodel files we already have
-        installed_files = set()
-        if TRANSLATION_MODELS_DIR.is_dir():
-            installed_files = {f.stem for f in TRANSLATION_MODELS_DIR.glob("*.argosmodel")}
-        for pkg in self.argos_packages:
+        for i, pkg in enumerate(self.argos_packages):
             from_name = pkg.get("from_name", pkg.get("from_code", "?"))
             to_name = pkg.get("to_name", pkg.get("to_code", "?"))
             pair = f"{from_name} → {to_name}"
             size = self._fmt_size(pkg.get("package_size", pkg.get("size", 0)))
-            iid = pkg.get("package_version", "") or f"{from_name}_{to_name}"
-            links = pkg.get("links", [])
-            url = links[0] if links else pkg.get("url", "")
-            status = "—"
-            tree.insert("", tk.END, iid=iid, values=(pair, size, status))
+            tree.insert("", tk.END, iid=str(i), values=(pair, size, "—"))
 
     def _download_argos(self, tree):
         selected = tree.selection()
         if not selected:
-            messagebox.showinfo("No selection", "Select a package first.")
+            messagebox.showinfo("No selection", "Select a package first.\nClick Fetch Index to load them.")
             return
-        iid = selected[0]
-        pkg = None
-        for p in self.argos_packages:
-            pkg_id = p.get("package_version", "") or f"{p.get('from_name', '')}_{p.get('to_name', '')}"
-            if pkg_id == iid:
-                pkg = p
-                break
-        if pkg is None:
-            return
-        threading.Thread(target=self._do_argos_download, args=(pkg, tree, iid), daemon=True).start()
+        idx = int(selected[0])
+        if idx < len(self.argos_packages):
+            pkg = self.argos_packages[idx]
+            threading.Thread(target=self._do_argos_download, args=(pkg, tree, str(idx)), daemon=True).start()
 
     def _do_argos_download(self, pkg, tree, iid):
         links = pkg.get("links", [])
@@ -268,7 +274,7 @@ class ModelManagerFrame(ttk.Frame):
         try:
             TRANSLATION_MODELS_DIR.mkdir(parents=True, exist_ok=True)
             req = Request(url, headers={"User-Agent": "PolyScribe/1.0"})
-            resp = urlopen(req, timeout=60)
+            resp = urlopen(req, timeout=120)
             total = int(resp.headers.get("Content-Length", 0))
             out_path = TRANSLATION_MODELS_DIR / filename
             downloaded = 0
@@ -296,12 +302,26 @@ class ModelManagerFrame(ttk.Frame):
         self.after(0, lambda: self.progress_var.set(pct))
         self.after(0, lambda: self.progress_label.configure(text=msg))
 
-    def _refresh_main_combos(self):
-        """Update the language dropdowns in the main transcribe tab."""
-        langs = sorted(LanguageManager.data.keys())
-        if hasattr(self.app, "from_combo"):
-            self.app.from_combo.configure(values=langs)
-            self.app.to_combo.configure(values=langs)
+    def apply_theme(self, palette):
+        self.configure(bg=palette["bg"])
+        for widget, role in self._themed_widgets:
+            try:
+                if role == "bg":
+                    widget.configure(bg=palette["bg"])
+                elif role == "surface":
+                    widget.configure(bg=palette["surface"])
+                elif role == "title":
+                    widget.configure(bg=palette["bg"], fg=palette["accent"])
+                elif role == "subtext":
+                    widget.configure(bg=palette["bg"], fg=palette["subtext"])
+                elif role == "label_on_surface":
+                    widget.configure(bg=palette["surface"], fg=palette["text"])
+            except tk.TclError:
+                pass
+        for card in self._cards:
+            card.apply_theme(palette)
+        for pill in self._pills:
+            pill.apply_theme(palette)
 
     @staticmethod
     def _fmt_size(nbytes):
