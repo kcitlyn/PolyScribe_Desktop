@@ -27,5 +27,12 @@ Thumbs.db
 # User settings (theme preference, etc.)
 src/settings.json
 
+# Saved transcription sessions
+history/
+
+# PyInstaller output
+dist/
+*.spec
+
 # Test/CI
 .pytest_cache/
