@@ -77,15 +77,16 @@ def run_transcription(from_language, sample_rate, device_ID, purpose):
     last_partial = ""
     transcription_chunks = []
     try:
-        for chunk, is_final in transcriber.processing_audio():
+        for payload, is_final in transcriber.processing_audio():
             if is_final:
+                chunk = payload["text"]
                 print('\r' + chunk + ' ' * max(0, len(last_partial) - len(chunk)), flush=True)
                 last_partial = ""
                 if speaker and purpose == "transcription":
                     transcription_chunks.append(chunk)
             else:
-                print('\r' + chunk + ' ' * max(0, len(last_partial) - len(chunk)), end='', flush=True)
-                last_partial = chunk
+                print('\r' + payload + ' ' * max(0, len(last_partial) - len(payload)), end='', flush=True)
+                last_partial = payload
     except KeyboardInterrupt:
         print("\nEnding transcription as per user request.")
     if speaker and purpose == "transcription" and transcription_chunks:
@@ -108,8 +109,9 @@ def run_translation(from_language, sample_rate, device_ID):
     transcriber = VoiceProcessor(from_language, sample_rate, device_ID)
     translation_chunks = []
     try:
-        for chunk, is_final in transcriber.processing_audio():
+        for payload, is_final in transcriber.processing_audio():
             if is_final:
+                chunk = payload["text"]
                 translator = TextTranslator(chunk, from_language, to_language)
                 translated_chunk = translator.translate_text()
                 if speaker:
