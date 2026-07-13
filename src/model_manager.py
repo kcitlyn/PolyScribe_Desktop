@@ -290,9 +290,20 @@ class ModelManagerFrame(tk.Frame):
         except Exception as e:
             self._set_progress(0, f"Error fetching index: {e}")
 
+    @staticmethod
+    def _get_installed_argos_pairs():
+        """Return {(from_code, to_code)} for Argos packages already installed
+        on this machine (via this app or any other Argos-based tool)."""
+        try:
+            from argostranslate import package
+            return {(p.from_code, p.to_code) for p in package.get_installed_packages()}
+        except Exception:
+            return set()
+
     def _populate_argos_tree(self):
         tree = self.argos_tree
         tree.delete(*tree.get_children())
+        installed = self._get_installed_argos_pairs()
         # iid is the index into self.argos_packages, stable across filtering
         visible = search_argos_packages(self.argos_search_var.get(), self.argos_packages)
         for pkg in visible:
@@ -301,7 +312,9 @@ class ModelManagerFrame(tk.Frame):
             to_name = pkg.get("to_name", pkg.get("to_code", "?"))
             pair = f"{from_name} → {to_name}"
             size = self._fmt_size(pkg.get("package_size", pkg.get("size", 0)))
-            tree.insert("", tk.END, iid=str(i), values=(pair, size, "—"))
+            status = ("✓ Installed"
+                      if (pkg.get("from_code"), pkg.get("to_code")) in installed else "—")
+            tree.insert("", tk.END, iid=str(i), values=(pair, size, status))
 
     def _download_argos(self):
         selected = self.argos_tree.selection()
